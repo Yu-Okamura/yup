@@ -1,8 +1,9 @@
 import heapq
 from collections import Counter
+import pickle
 
-def convert_to_binary():
-    with open('content.txt', 'r', encoding='utf-8') as f:
+def convert_to_binary(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
         f_origin=f.read()
         # print('original: '+f_origin)
     f_utf8=f_origin.encode('utf-8')
@@ -69,17 +70,18 @@ def huffman_encode(binary_bit_blocks, huffman_codes):
     print('length of encoded binary: '+str(len(encoded_binary)))
     return encoded_binary
 
+def save_as_yup(filename, huffman_codes, encoded_binary):
+    encoded_bytes = int(encoded_binary, 2).to_bytes((len(encoded_binary) + 7) // 8, byteorder='big')
+    data = {
+        'metadata': huffman_codes,
+        'binary_data': encoded_bytes
+    }
+    with open(filename, 'wb') as file:
+        pickle.dump(data, file)
+    print(f"Data successfully saved to {filename}.")
 
-f_binary=convert_to_binary()
 
-"""4bit blocks"""
-print('\n4 bit block encoding:')
-binary_bit_blocks=split_bit_blocks(f_binary, 4)
-frequency=count_frequency(binary_bit_blocks)
-huffman_tree_root = build_huffman_tree(frequency)
-huffman_codes = generate_huffman_codes(huffman_tree_root)
-# print('Huffman codes: '+ str(huffman_codes))
-huffman_encode(binary_bit_blocks, huffman_codes)
+f_binary=convert_to_binary('content.txt')
 
 """8bit blocks"""
 print('\n8 bit block encoding:')
@@ -88,15 +90,20 @@ frequency=count_frequency(binary_bit_blocks)
 huffman_tree_root = build_huffman_tree(frequency)
 huffman_codes = generate_huffman_codes(huffman_tree_root)
 # print('Huffman codes: '+ str(huffman_codes))
-huffman_encode(binary_bit_blocks, huffman_codes)
+encoded_binary=huffman_encode(binary_bit_blocks, huffman_codes)
+# print(encoded_binary)
 
-"""16bit blocks"""
-print('\n16 bit block encoding:')
-binary_bit_blocks=split_bit_blocks(f_binary, 16)
+huffman_codes_1st=huffman_codes
+
+"""second
+binary_bit_blocks=split_bit_blocks(encoded_binary, )
 frequency=count_frequency(binary_bit_blocks)
 huffman_tree_root = build_huffman_tree(frequency)
 huffman_codes = generate_huffman_codes(huffman_tree_root)
-# print('Huffman codes: '+ str(huffman_codes))
-huffman_encode(binary_bit_blocks, huffman_codes)
+encoded_binary=huffman_encode(binary_bit_blocks, huffman_codes)
+"""
+
+save_as_yup('content.yup', huffman_codes, encoded_binary)
+
 
 print('\n\n\n')
