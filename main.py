@@ -85,7 +85,7 @@ f_binary=convert_to_binary('content.txt')
 
 """8bit blocks"""
 print('\n8 bit block encoding:')
-binary_bit_blocks=split_bit_blocks(f_binary, 8)
+binary_bit_blocks=split_bit_blocks("10111101000000101000111101000000000011110111001000001000100111000101110001111101011101111010000110101101101000010100000100111", 4)
 frequency=count_frequency(binary_bit_blocks)
 huffman_tree_root = build_huffman_tree(frequency)
 huffman_codes = generate_huffman_codes(huffman_tree_root)
