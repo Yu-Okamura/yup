@@ -81,57 +81,6 @@ def huffman_encode(binary_seq_bit_blocks, huffman_codes):
     # print('length of encoded binary: '+str(len(encoded_binary)))
     return encoded_binary
 
-def lz77_compress(filename, window_size, max_match_length):
-    with open(filename, 'r', encoding='utf-8') as f:
-        text=f.read()
-
-    i=0
-    text_length=len(text)
-    token=[0, 0, text[0]]
-    token_seq=[]
-    token_seq.append(token)
-    search_buffer=text[0]
-    i+=1
-
-    while i < text_length-1:
-        if text[i] in search_buffer:
-            current_buffer=text[i]
-            matched_buffer=''
-
-            while current_buffer in search_buffer and len(current_buffer) < max_match_length+1:
-                matched_buffer=current_buffer
-                if i==text_length-1: #current_buffer reached the end + still matches
-                    break
-                current_buffer=current_buffer+text[i+1]
-                i+=1
-            matched_length=len(matched_buffer)
-            matched_offset=i-matched_length-search_buffer.rfind(matched_buffer)
-            literal=current_buffer[len(current_buffer)-1]
-
-            if i == text_length-1:
-                if current_buffer == matched_buffer:
-                    matched_offset+=1
-                    literal='None'
-                    print(matched_buffer)
-
-            token=[matched_offset, matched_length, literal]
-            token_seq.append(token)
-            search_buffer=search_buffer+matched_buffer
-            if len(search_buffer)>window_size:
-                search_buffer = search_buffer[-window_size:]
-
-            i+=1 #skip literal
-
-        else:
-            token=[0, 0, text[i]]
-            token_seq.append(token)
-            search_buffer = search_buffer+text[i]
-            if len(search_buffer)>window_size:
-                search_buffer = search_buffer[-window_size:]
-            i+=1
-
-    return token_seq
-
 def deflate(token_seq):
     flat_list = [item for sublist in token_seq for item in sublist]
     token_frequencies = count_frequencies(flat_list)
@@ -170,23 +119,58 @@ def tokens_to_bytes(input_string):
 
     return token_bytes
 
+def truncate_words_in_string(input_string):
+    words = input_string.split(" ")  # Split by spaces
+    result = []
+
+    for word in words:
+        if len(word) > 5:  # Check if the word is longer than 5 characters
+            result.append(word[:5])  # Truncate the word to 5 characters
+        else:
+            result.append(word)  # Keep the word as is
+
+    return " ".join(result)  # Rejoin the words into a string
+
 def main():
 
     filename='content.txt'
     binary_seq=convert_to_binary(filename)
+    file_size_original=os.path.getsize(filename)
+    #print(binary_seq)
+    print('The size of the original data: ' + str(file_size_original) + ' bytes')
+
+    """omitting"""
+    with open(filename, 'r', encoding='utf-8') as f:
+        text=f.read()
+    text = text.replace(' a ', ' ')
+    text = text.replace(' is ', ' ')
+    text = text.replace(' are ', ' ')
+    text = text.replace(' were ', ' ')
+    text = text.replace(' was ', ' ')
+    text = text.replace(' is ', ' ')
+    text = text.replace('ing ', 'i')
+    text = text.replace('ed ', 'd')
+    text = text.replace('. ', ' ')
+    text = text.replace(', ', ' ')
+    text=truncate_words_in_string(text)
+    text = text.replace(' ', '')
+    """print(text)"""
+    text_deflate_compressed = zlib.compress(text.encode('utf-8'), -1)
+    text_deflate_compressed = ''.join(format(byte, '08b') for byte in text_deflate_compressed)
+    #print(text_deflate_compressed)
+    print('The size after Omit+DEFLATE (zlib): '+ str(len(text_deflate_compressed)/8)+' bytes')
+
 
     """Zip"""
     zipfy(filename, 'content.zip')
 
-    file_size_original=os.path.getsize(filename)
     file_size_zip=os.path.getsize('content.zip')
     compression_ratio_zip = (file_size_zip/file_size_original)*100
 
-    print('The size of the original data: ' + str(file_size_original) + ' bytes')
     print('The size of the zipped data: ' + str(file_size_zip)+ ' bytes')
     print('The compression ratio: ' + str(round(compression_ratio_zip, 0)) + ' %')
 
-
+    '''
     """Huffman encoding with 8 bit blocks"""
     file_original_binary=convert_to_binary(filename)
     binary_seq_bit_blocks=split_binary_seq_bit_blocks(file_original_binary, 8)
@@ -202,28 +186,24 @@ def main():
 
     print('The size of the data after Huffman encoding (8-bits): '+ str(size_total_huffman_bytes)+' bytes') # this is approximation
     print('The compression ratio: '+ str(round(compression_ratio_huffman, 0)) + ' %')
-
-
-    """DEFLATE"""
-    window_size=32768
-    max_match_length=258
-    token_seq=lz77_compress(filename, window_size, max_match_length)
-    encoded_binary=deflate(token_seq)
-    print('The size of the data after DEFLATE: '+ str(len(encoded_binary)/8)+' bytes')
+    '''
 
     """DEFLATE (zlib)"""
     with open(filename, 'r', encoding='utf-8') as f:
         text=f.read()
-    text_deflate_compressed = zlib.compress(text.encode('utf-8'), 9)
+    text_deflate_compressed = zlib.compress(text.encode('utf-8'), -1)
     text_deflate_compressed = ''.join(format(byte, '08b') for byte in text_deflate_compressed)
+    #print(text_deflate_compressed)
     print('The size of the data after DEFLATE (zlib): '+ str(len(text_deflate_compressed)/8)+' bytes')
 
     """Tokenize + zlib"""
     tokenized_text=tokenize(filename)
     token_bytes=tokens_to_bytes(tokenized_text)
+    #print(token_bytes)
     print('The size of the data after Tokenize: '+ str(len(token_bytes)/8)+' bytes')
-    deflate_token_bytes=zlib.compress(token_bytes, 9)
+    deflate_token_bytes=zlib.compress(token_bytes, -1)
     deflate_token_bytes=''.join(format(byte, '08b') for byte in deflate_token_bytes)
+    #print(deflate_token_bytes)
     print('The size of the data after Tokenize + zlib: '+ str(len(deflate_token_bytes)/8)+' bytes')
 
     """Tokenize + huffman"""
