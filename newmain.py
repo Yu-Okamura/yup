@@ -97,9 +97,17 @@ def tokenize(filename):
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     with open(filename, 'r', encoding='utf-8') as f:
         text=f.read()
+    text = text.replace('. ', ' ')
+    text = text.replace(', ', ' ')
+
     tokenized_text_list = tokenizer.encode(text, add_special_tokens=True)
+
+    tokens_to_string = tokenizer.convert_ids_to_tokens(tokenized_text_list)
+    print(tokens_to_string)
+
     tokenized_text_list_base7 = decimal_to_base(tokenized_text_list, 7)
     tokenized_text = ",".join(map(str, tokenized_text_list_base7))
+
 
     return tokenized_text
 
@@ -168,7 +176,7 @@ def main():
     compression_ratio_zip = (file_size_zip/file_size_original)*100
 
     print('The size of the zipped data: ' + str(file_size_zip)+ ' bytes')
-    print('The compression ratio: ' + str(round(compression_ratio_zip, 0)) + ' %')
+    #print('The compression ratio: ' + str(round(compression_ratio_zip, 0)) + ' %')
 
     '''
     """Huffman encoding with 8 bit blocks"""
@@ -196,17 +204,27 @@ def main():
     #print(text_deflate_compressed)
     print('The size of the data after DEFLATE (zlib): '+ str(len(text_deflate_compressed)/8)+' bytes')
 
-    """Tokenize + zlib"""
+    """tokenize + zlib"""
     tokenized_text=tokenize(filename)
+    tokenized_deflate_compressed = zlib.compress(tokenized_text.encode('utf-8'), -1)
+    tokenized_deflate_compressed = ''.join(format(byte, '08b') for byte in tokenized_deflate_compressed)
+    #print(text_deflate_compressed)
+    print('The size after tokenized+zlib: '+ str(len(tokenized_deflate_compressed)/8)+' bytes')
+
+    """Tokenize + numarize + zlib"""
+    #tokenized_text=tokenize(filename)
     token_bytes=tokens_to_bytes(tokenized_text)
     #print(token_bytes)
+
+    '''
     print('The size of the data after Tokenize: '+ str(len(token_bytes)/8)+' bytes')
     deflate_token_bytes=zlib.compress(token_bytes, -1)
     deflate_token_bytes=''.join(format(byte, '08b') for byte in deflate_token_bytes)
     #print(deflate_token_bytes)
     print('The size of the data after Tokenize + zlib: '+ str(len(deflate_token_bytes)/8)+' bytes')
+    '''
 
-    """Tokenize + huffman"""
+    print("\n\n\n")
 
 
 if __name__ == "__main__":
